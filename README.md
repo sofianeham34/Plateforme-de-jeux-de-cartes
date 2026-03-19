@@ -1,70 +1,77 @@
-# Getting Started with Create React App
+# 🎮 Projet Jeux de Cartes en Ligne
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Bienvenue sur notre plateforme web de jeux de cartes multijoueurs ! Cette application permet de rassembler plusieurs joueurs en ligne autour de différents jeux de cartes, dans une interface centralisée et interactive.
 
-## Available Scripts
+## 🎲 Jeux disponibles
 
-In the project directory, you can run:
+- 🐂 **6 qui prend**
+- ⚔️ **Bataille ouverte**
+- 🃏 **8 américain**
 
-### `npm start`
+## 📖 Contexte du projet
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Ce projet a été imaginé et développé au cours de notre deuxième année de **Licence Informatique (L2)**. Il représente l'aboutissement d'un travail de groupe visant à concevoir de A à Z une application web multijoueur.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 👥 Équipe de développement
 
-### `npm test`
+- Sami Chbicheb
+- Dogukan Tokmak
+- Sofiane Hammar
+- Aly Hachem Reda
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 🚀 Objectifs principaux
 
-### `npm run build`
+- Créer une **application web ludique et interactive**, offrant une bonne expérience utilisateur.
+- Permettre à plusieurs joueurs de se connecter simultanément et de **jouer en ligne** en temps réel.
+- Intégrer la logique et les **règles spécifiques** de plusieurs jeux de cartes au sein du même environnement.
+- Maîtriser une **architecture client-serveur** et collaborer efficacement autour du code.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 🛠️ Stack Technique
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- **Front-end** : React.js, CSS
+- **Back-end** : Node.js, framework Express
+- **Base de données** : SQLite (pour la persistance des données)
+- **Environnement & Outils** : Git, GitHub, Visual Studio Code
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 📦 Instructions d'installation
 
-### `npm run eject`
+Pour exécuter ce projet sur votre machine locale, veuillez suivre les étapes ci-dessous :
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### 1. Récupération du projet
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Commencez par cloner le dépôt GitHub et installer les dépendances principales :
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+git clone https://github.com/laprise221/projetLicence2.git
+cd projetLicence2
+npm install
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+*(Note : l'installation nécessitera peut-être Python pour la compilation de certains modules comme SQLite).*
 
-## Learn More
+### 2. Démarrage du Client (Interface Graphique)
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Dans un premier terminal, à la racine du projet, lancez l'application React :
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm start
+```
 
-### Code Splitting
+### 3. Démarrage du Serveur (Logique métier & Base de données)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Ouvrez un **deuxième terminal**, naviguez vers le dossier du serveur et exécutez le script :
 
-### Analyzing the Bundle Size
+```bash
+cd serveur
+node serveur.js
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## 🌐 Jouer en ligne
 
-### Making a Progressive Web App
+Une fois le client et le serveur démarrés avec succès, ouvrez votre navigateur favori et rendez-vous à l'adresse suivante pour accéder à l'interface de jeu :
+👉 **[http://localhost:3000](http://localhost:3000)**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## 📄 Informations de Licence
 
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Ce projet a été réalisé à des **fins strictement pédagogiques** dans le cadre de notre cursus universitaire (Licence 2). 
+Toute réutilisation dans un cadre commercial est interdite sans l'autorisation explicite de l'ensemble des auteurs.
