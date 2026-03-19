@@ -1,0 +1,546 @@
+import React, { useState, useEffect } from "react";
+import io from "socket.io-client";
+
+const socket = io.connect("http://localhost:3001");
+
+const QuiPrend = ({ nombreDeJoueurs }) => {
+  window.addEventListener("beforeunload", function (e) {
+    socket.emit("deconnexion", { login: this.sessionStorage.getItem("login") });
+  });
+  useEffect(() => {
+    socket.emit("rejRoom", sessionStorage.getItem("idPartie"));
+  });
+  const createur = sessionStorage.getItem("createur");
+  const idPartie = sessionStorage.getItem("idPartie");
+  const [nombres, setNombres] = useState(
+    Array.from({ length: 104 }, (_, index) => (index + 1).toString())
+  );
+  const [tourTermine, setTourTermine] = useState(false);
+
+  const boeuf = (valeur) => {
+    const dernierChiffre = valeur.toString().slice(-1); // Récupérer la dernière chiffre de la valeur
+
+    if (valeur.toString() === "55") {
+      return 7;
+    } else if (dernierChiffre === "5") {
+      return 2;
+    } else if (dernierChiffre === "0") {
+      return 3;
+    } else if (parseInt(valeur) % 11 === 0 && valeur !== "55") {
+      return 5;
+    } else return 1;
+  };
+
+  const paquet = nombres.map((n) => ({
+    valeur: n,
+    image: `./cartesboeuf/${n}.png`,
+    boeuf: boeuf(n),
+  }));
+
+  const melangerPaquet = (paquet) => {
+    const paquetMelange = [...paquet];
+
+    for (let i = paquetMelange.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [paquetMelange[i], paquetMelange[j]] = [
+        paquetMelange[j],
+        paquetMelange[i],
+      ];
+    }
+
+    return paquetMelange;
+  };
+
+  const paquetMelange = melangerPaquet(paquet);
+  const nombreDeCartesParJoueur = 10;
+  const listeJ = JSON.parse(sessionStorage.getItem("listeJoueurs"));
+
+  //distribue les cartes
+  const joueurs = Array.from(
+    { length: sessionStorage.getItem("nbJMax") },
+    (_, index) => ({
+      id: index + 1,
+      nom: listeJ[index],
+      cartes: paquetMelange.slice(
+        index * nombreDeCartesParJoueur,
+        (index + 1) * nombreDeCartesParJoueur
+      ),
+      score: 0,
+    })
+  );
+
+  const pioche_ = (joueurs, paquetMelange) => {
+    const pioche = [...paquetMelange]; // Copie du paquet mélangé initial
+
+    joueurs.forEach((joueur) => {
+      joueur.cartes.forEach((carteJoueur) => {
+        const indexCarteDansPioche = pioche.findIndex(
+          (cartePioche) => cartePioche.valeur === carteJoueur.valeur
+        );
+        if (indexCarteDansPioche !== -1) {
+          pioche.splice(indexCarteDansPioche, 1); // Retire la carte du paquet pioche
+        }
+      });
+    });
+    return pioche;
+  };
+
+  const [pioche, setPioche] = useState([]);
+  const [cartesSelectionnees, setCartesSelectionnees] = useState([]);
+  const [selectionsEffectuees, setSelectionsEffectuees] = useState([]);
+  const [peutJouer,setPeutJouer] = useState(false);
+  const [cartesTrieesLigne,setCartesTrieesLigne] = useState([]);
+  const [CarteAChoisir,setCarteAChoisir] = useState(null);
+  useEffect(() => {
+    if (createur == 1) {
+      socket.emit("deckDepartQuiPrend", {
+        deck: joueurs,
+        idP: idPartie,
+        pioche: pioche_(joueurs, paquetMelange),
+      });
+    }
+  }, []);
+
+  const peutEtrePlace = (carte,pioche)=>{
+    for(let i=0; i<pioche.length; i++){
+      let ligne = pioche[i];
+      if(carte.valeur > ligne[ligne.length-1].valeur){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const [paquetJoueurs, setPaquetJoueurs] = useState([]);
+  useEffect(() => {
+    socket.on("deckDepartQuiPrend", (deck) => {
+      setPaquetJoueurs(deck.deck);
+      console.log("le deck est", deck.deck);
+      setPioche(deck.pioche);
+    });
+
+    socket.on("cartesselectionnees", (cartes) => {
+      console.log("LES CARTES ON ETE SELECTIONNEES");
+
+      const nbJ = sessionStorage.getItem("nbJMax");
+      console.log("le nombre de joueurs est", nbJ);
+      console.log("les cartes choisies sont", cartes.cartes);
+      setCartesSelectionnees(cartes.cartes);
+      const nouvellesCartesSelectionnees = cartes.cartes;
+      console.log(
+        "le nombre de cartes selectionnees est de ",
+        nouvellesCartesSelectionnees.length
+      );
+
+      if (nouvellesCartesSelectionnees.length == nbJ) {
+        console.log(
+          "Tous les joueurs ont effectué leur sélection. Fin du tour."
+        );
+        const cartestriees = trieCarteJoue(nouvellesCartesSelectionnees);
+        console.log("cartes triees", cartestriees);
+        var piocheA= cartes.pioche;
+        var ligneAPlacer = -1;
+        if(!peutEtrePlace(cartestriees[0],piocheA)){ //si la plus petite carte ne peut pas etre placée
+          console.log("LA CARTE NE PEUT PAS ETRE PLACEE REDIRECITON");
+          socket.emit("choisirSaCarte",{"cartestriees":cartestriees,"carte":cartestriees[0],"idP":idPartie});
+        } else {
+        for (const carte of cartestriees) {
+          var ecartM=200;
+          console.log("taille de la pioche pour placer carte",piocheA.length);
+
+          for(let i=0;i<piocheA.length;i++){
+            let ligneA=piocheA[i];
+            console.log("ligne A",ligneA);
+            let ecartA=(carte.valeur - ligneA[ligneA.length-1].valeur);
+            console.log("valeur derniere carte ligneA",carte.valeur - ligneA[ligneA.length-1].valeur);
+            if(ecartA>0){
+              if(ecartM>ecartA){
+                ecartM=ecartA;
+                ligneAPlacer= i;
+              }
+            }
+          }
+          console.log("changement valeur ligneAPlacer",ligneAPlacer);
+            var ligne=piocheA[ligneAPlacer];
+            console.log("ligne de pioche",ligne);
+            if ( ligne.length == 5) {
+              var score = 0;
+              for(let carte of ligne){
+                score+=carte.boeuf;
+              }
+              var nouveauPaquetJoueurs = cartes.paquet;
+              for(let joueur of nouveauPaquetJoueurs){
+                if(joueur.nom == carte.joueur){
+                  joueur.score=score;
+                }
+              }
+              socket.emit("scoreUpdate",{"paquetscore":nouveauPaquetJoueurs,"idP":idPartie});
+              let nouvListePioche = [];
+              for(let i=0; i<piocheA.length; i++){
+                if(ligneAPlacer==i){
+                  nouvListePioche.push([carte]);
+                } else {
+                  nouvListePioche.push(piocheA[i]);
+                }
+              }
+              setPiocheLists(nouvListePioche);
+              piocheA= nouvListePioche;
+              console.log("PICHE               A",piocheA);
+            } else {
+              let nouvListePioche= piocheA;
+              nouvListePioche[ligneAPlacer].push(carte);
+              setPiocheLists(nouvListePioche);
+            }
+          
+        }
+        console.log("létat de la pioche",piocheA);
+        setTourTermine(true);
+        const nouveauPaquetJoueur = enleverCartesSelectionnees(
+          cartes.jstate,
+          nouvellesCartesSelectionnees
+        );
+        console.log("REINITIALISATION PAQUET");
+        setPaquetJoueurs(nouveauPaquetJoueur);
+      }
+      }
+    });
+
+    socket.on("selection", (selection) => {
+      console.log("les selections sont", selection);
+      setSelectionsEffectuees(selection);
+    });
+
+    socket.on("scoreUpdate",(paquet)=>{
+      setPaquetJoueurs(paquet);
+    });
+
+    socket.on("choisirSaCarte",(data)=>{
+      console.log("REDIRECTION EFFECTUEE");
+      if(data.carte.joueur==sessionStorage.getItem("login")){
+        console.log("A MOI DE CHOISIR UNE CARTE");
+        setCarteAChoisir(data.carte);
+        setCartesTrieesLigne(data.cartestriees);
+        setPeutJouer(true);
+      }
+    });
+
+    socket.on("carteChoisie",data =>{
+      let nouvpaquet=data.paquet;
+      let piocheA = data.pioche;
+      var score = 0;
+      let ligneAPlacer = data.index;
+      let carte = data.carte;
+      let ligne = piocheA[ligneAPlacer];
+      let cartestriees= data.cartestriees;
+        for(let carte of ligne){
+          score+=carte.boeuf;
+        }
+        var nouveauPaquetJoueurs = nouvpaquet;
+        for(let joueur of nouveauPaquetJoueurs){
+          if(joueur.nom == carte.joueur){
+            joueur.score=score;
+          }
+        }
+        socket.emit("scoreUpdate",{"paquetscore":nouveauPaquetJoueurs,"idP":idPartie});
+        nouvpaquet = nouveauPaquetJoueurs;
+        let nouvListePioche = [];
+        for(let i=0; i<piocheA.length; i++){
+          if(ligneAPlacer==i){
+            nouvListePioche.push([carte]);
+          } else {
+            nouvListePioche.push(piocheA[i]);
+          }
+        }
+        setPiocheLists(nouvListePioche);
+        piocheA= nouvListePioche;
+        
+        for (const carte of cartestriees) {
+          var ecartM=200;
+          ligneAPlacer = -1;
+          for(let i=0;i<piocheA.length;i++){
+            let ligneA=piocheA[i];
+            let ecartA=(carte.valeur - ligneA[ligneA.length-1].valeur);
+            if(ecartA>0){
+              if(ecartM>ecartA){
+                ecartM=ecartA;
+                ligneAPlacer= i;
+              }
+            }
+          }
+
+            ligne=piocheA[ligneAPlacer];
+            if ( ligne.length == 5) {
+              var score = 0;
+              for(let carte of ligne){
+                score+=carte.boeuf;
+              }
+              var nouveauPaquetJoueurs = nouvpaquet;
+              for(let joueur of nouveauPaquetJoueurs){
+                if(joueur.nom == carte.joueur){
+                  joueur.score=score;
+                }
+              }
+              socket.emit("scoreUpdate",{"paquetscore":nouveauPaquetJoueurs,"idP":idPartie});
+              nouvpaquet = nouveauPaquetJoueurs;
+              let nouvListePioche = [];
+              for(let i=0; i<piocheA.length; i++){
+                if(ligneAPlacer==i){
+                  nouvListePioche.push([carte]);
+                } else {
+                  nouvListePioche.push(piocheA[i]);
+                }
+              }
+              setPiocheLists(nouvListePioche);
+              piocheA= nouvListePioche;
+            } else {
+              let nouvListePioche= piocheA;
+              nouvListePioche[ligneAPlacer].push(carte);
+              setPiocheLists(nouvListePioche);
+            }
+          
+        }
+        setTourTermine(true);
+        
+        cartestriees.push(carte);
+        let lepaquet = enleverCartesSelectionnees(
+          nouvpaquet,
+          cartestriees
+        );
+        setPaquetJoueurs(lepaquet);
+        });
+
+
+  }, [socket]);
+
+  const [monpaquet, setmonpaquet] = useState([]);
+  const [monscore, setmonscore] = useState(0);  
+  const [monId, setMonId] = useState(null);
+  useEffect(() => {
+    console.log("changement du paquet",paquetJoueurs);
+
+    for (let i of paquetJoueurs) {
+      console.log("mon login",sessionStorage.getItem("login"));
+      if (i.nom == sessionStorage.getItem("login")) {
+        console.log("mes cartes",i.cartes);
+        setmonpaquet(i.cartes);
+        setmonscore(i.score);
+        setMonId(i.id);
+      }
+    }
+  }, [paquetJoueurs]);
+
+  const [hoveredCard, setHoveredCard] = useState(null);
+
+  const zoomCard = (card) => {
+    setHoveredCard(card);
+  };
+
+  const dezoomCard = () => {
+    setHoveredCard(null);
+  };
+
+  const selectionnerCarte = ({ playerId, card }) => {
+    if (selectionsEffectuees.includes(playerId)) {
+      console.log(`Le joueur ${playerId} a déjà effectué une sélection.`);
+      return;
+    }
+
+    const nouvellesCartesSelectionnees = [...cartesSelectionnees];
+
+    const joueur = paquetJoueurs.find((j) => j.id === playerId);
+    if (joueur) {
+      nouvellesCartesSelectionnees.push({
+        joueur: joueur.nom,
+        carte: `Carte ${card.valeur}`,
+        valeur: parseInt(card.valeur),
+        boeuf: card.boeuf,
+        image: card.image,
+      });
+    }
+
+    socket.emit("cartesChoisies", {
+      cartes: nouvellesCartesSelectionnees,
+      idP: sessionStorage.getItem("idPartie"),
+      jstate: paquetJoueurs,
+      pioche : piocheLists,
+      paquet : paquetJoueurs
+    });
+
+    setCartesSelectionnees(nouvellesCartesSelectionnees);
+    setSelectionsEffectuees([...selectionsEffectuees, playerId]);
+    socket.emit("selectionEffectues", {
+      selection: [...selectionsEffectuees, playerId],
+      idP: sessionStorage.getItem("idPartie"),
+    });
+
+    console.log("nouv cartes", nouvellesCartesSelectionnees);
+  };
+
+  const enleverCartesSelectionnees = (
+    joueurs,
+    nouvellesCartesSelectionnees
+  ) => {
+    console.log("SUPPRESSION DES CARTES");
+    const cartesASupprimer = nouvellesCartesSelectionnees.map(
+      (selection) => selection.carte
+    );
+    const nouveauxJoueurs = joueurs.map((j) => ({
+      ...j,
+      cartes: j.cartes.filter(
+        (carte) => !cartesASupprimer.includes(`Carte ${carte.valeur}`)
+      ),
+    }));
+    return nouveauxJoueurs;
+  };
+
+  const demarrerNouveauTourAutomatique = () => {
+    // Réinitialiser les états pour le nouveau tour
+    setCartesSelectionnees([]);
+    setSelectionsEffectuees([]);
+    setTourTermine(false);
+
+  };
+
+  useEffect(() => {
+    if (tourTermine) {
+      // Démarrer automatiquement un nouveau tour après un délai de 2 secondes
+      const timeoutId = setTimeout(() => {
+        demarrerNouveauTourAutomatique();
+      }, 2000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [tourTermine]);
+
+
+  //DOGUKAN A RAJOUTE CA
+  const [cartesTrie, setCartesTrie] = useState([]); // État pour stocker les 4 cartes triées
+  const trierQuatrePremieresCartes = (pioche) => {
+    const cartesTrie = pioche
+      .slice(0, 4)
+      .sort((a, b) => parseInt(a.valeur) - parseInt(b.valeur));
+    return cartesTrie;
+  };
+
+  const [piocheLists, setPiocheLists] = useState([]);
+  useEffect(() => {
+    // Trier les 4 premières cartes de la pioche
+    const cartesTrie = trierQuatrePremieresCartes(pioche);
+    setCartesTrie(cartesTrie);
+
+    // Découpez votre pioche en listes de 4 cartes
+    const piocheLists = [];
+
+    for (let i = 0; i < 4; i++) {
+      const sousListe = cartesTrie.slice(i, i + 1); // Utilisez slice pour extraire les 4 premières cartes
+      piocheLists.push(sousListe);
+    }
+    console.log("la pioche est",piocheLists[0]);
+    setPiocheLists(piocheLists);
+  }, [pioche]);
+
+  const [carteZoomed, setCarteZoomed] = useState(null);
+
+  const zoomCarteSelectionner = (playerId, selectionsEffectuees, carte) => {
+    if (!selectionsEffectuees.includes(playerId)) {
+      setCarteZoomed(carte);
+    }
+  };
+
+  const trieCarteJoue = (listeCartes) => {
+    // Vérifiez si listeCartes est défini avant de le trier
+    if (listeCartes) {
+      const nouvListe = listeCartes.sort((carteA, carteB) => {
+        // Comparaison des valeurs des cartes
+        const valeurA = parseInt(carteA.valeur);
+        const valeurB = parseInt(carteB.valeur);
+
+        // Utiliser la soustraction pour déterminer l'ordre
+        return valeurA - valeurB;
+      });
+      return nouvListe;
+    } else {
+      console.error("Liste de cartes non définie.");
+      return [];
+    }
+  };
+
+  const selectionnerLigne = (index)=>{
+    if(peutJouer){
+      console.log("J AI CHOISI LA LIGNE",index);
+      console.log("peut jouer");
+      let cartestriees= [];
+      for(let i = 1;i<cartesTrieesLigne.length;i++){ //on enleve la premiere carte des cartes triees
+        cartestriees.push(cartesTrieesLigne[i]);
+      }
+      socket.emit("carteChoisie",{"idP":idPartie,"carte":CarteAChoisir,"cartestriees":cartestriees,"index":index,"pioche":piocheLists,"paquet":paquetJoueurs});
+      setPeutJouer(false);
+    }
+  }
+  
+
+  return (
+    <div>
+      <h2>Main du Joueur:</h2>
+      <div>
+        <h3>
+          {sessionStorage.getItem("login")} - Score: {monscore}
+        </h3>
+        <ul style={{ display: "flex", listStyle: "none", padding: 0 }}>
+          {monpaquet.map((carte, index) => (
+            <li key={index} style={{ marginRight: "5px" }}>
+              <p>
+                Carte {carte.valeur}: <p>{carte.boeuf} têtes de bœuf</p>
+              </p>
+              <img
+                src={carte.image}
+                alt={`Carte ${carte.valeur}`}
+                style={{
+                  width:
+                    carteZoomed === carte || hoveredCard === carte
+                      ? "140px"
+                      : "70px",
+                  maxWidth: "100px",
+                  maxHeight: "150px",
+                  cursor: "pointer",
+                  transition: "width 0.3s ease-out",
+                }}
+                onClick={() => {
+                  selectionnerCarte({ playerId: monId, card: carte });
+                  zoomCarteSelectionner(monId, selectionsEffectuees, carte);
+                }}
+                onMouseEnter={() => zoomCard(carte)}
+                onMouseLeave={dezoomCard}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+      <h2>Pioche:</h2>
+      {piocheLists.map((sousListe, listeIndex) => (
+        <ul
+          key={listeIndex}
+          style={{ display: "flex", listStyle: "none", padding: 0 }}
+        >
+          {sousListe.map((carte, index) => (
+            <li key={carte.valeur} style={{ marginRight: "5px" }}>
+              <img
+                src={carte.image}
+                alt={`Carte ${carte.valeur}`}
+                style={{
+                  maxWidth: "100px",
+                  maxHeight: "100px",
+                  marginRight: "5px",
+                  cursor: "pointer",
+                  transition: "width 0.3s ease-out",
+                }}
+                onClick = {()=>{selectionnerLigne(listeIndex)}}
+              />
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  );
+};
+
+export default QuiPrend;
